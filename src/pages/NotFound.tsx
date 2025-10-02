@@ -5,11 +5,12 @@ export default function NotFound() {
         <div className="h-screen flex flex-col items-center justify-center text-center p-4">
             <h1 className="text-7xl font-bold">404</h1>
             <p className="mb-4 text-muted-foreground">
-                Looks like this page never got generated...
-                maybe the AI was on a coffee break ☕
+                holy crap lois!
+                
+                this is worse than the time i got a 404 error!
             </p>
             <Link to="/" className="underline text-primary">
-                Build something new →
+                go home →
             </Link>
         </div>
     );

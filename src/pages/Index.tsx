@@ -18,10 +18,10 @@ const Index = () => {
       <div className="container mx-auto px-6 py-12">
         <header className="text-center mb-16">
           <div className="inline-block brutal-border bg-white px-8 py-4 shadow-brutal-lg mb-8 -rotate-1">
-            <h1 className="text-7xl font-black">BRUTALENGINE 2D</h1>
+            <h1 className="text-7xl font-black">BRUTAL2D</h1>
           </div>
           <p className="text-3xl font-black uppercase mb-8 rotate-1">
-            Make games. No BS.
+            Make games with JAVASCRIPT.
           </p>
           <button
             onClick={() => navigate('/editor')}
@@ -47,7 +47,7 @@ const Index = () => {
         </div>
 
         <div className="brutal-card bg-white p-12 text-center">
-          <h2 className="text-4xl font-black mb-6">FEATURES THAT SLAP</h2>
+          <h2 className="text-4xl font-black mb-6">FEATURES THAT ARE COOL</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
             <div className="brutal-border bg-brutal-green p-6">
               <h3 className="text-xl font-black mb-2">✓ VISUAL EDITOR</h3>
