@@ -67,7 +67,7 @@ const Animations = () => {
                 value={newAnimation.name}
                 onChange={(e) => setNewAnimation({ ...newAnimation, name: e.target.value })}
                 className="brutal-input w-full"
-                placeholder="empty animation"
+                placeholder="Walk Cycle"
               />
             </div>
             <div>
