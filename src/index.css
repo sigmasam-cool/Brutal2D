@@ -6,32 +6,23 @@
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 0%;
-
     --card: 0 0% 100%;
     --card-foreground: 0 0% 0%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 0%;
-
     --primary: 0 0% 0%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 210 40% 96.1%;
+    --secondary: 60 100% 50%;
     --secondary-foreground: 0 0% 0%;
-
-    --muted: 210 40% 96.1%;
+    --muted: 0 0% 90%;
     --muted-foreground: 0 0% 40%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 0 0% 0%;
-
-    --destructive: 0 84.2% 60.2%;
+    --accent: 328 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 100% 50%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 0 0% 0%;
     --input: 0 0% 0%;
     --ring: 0 0% 0%;
-
     --radius: 0rem;
   }
 }
@@ -43,13 +34,16 @@
 
   body {
     @apply bg-white text-foreground;
-    font-family: 'Arial Black', 'Arial Bold', Gadget, sans-serif;
+    font-family: 'Arial', 'Helvetica', sans-serif;
+    font-weight: 700;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: -0.02em;
+  button {
+    @apply font-bold;
+  }
+
+  input, textarea, select {
+    @apply font-bold;
   }
 }
 
@@ -59,17 +53,14 @@
   }
 
   .brutal-button {
-    @apply brutal-border px-6 py-3 font-black uppercase tracking-tight shadow-brutal transition-all;
-    @apply hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-brutal-sm;
-    @apply active:translate-x-[4px] active:translate-y-[4px] active:shadow-none;
+    @apply brutal-border px-4 py-2 font-bold uppercase transition-all hover:translate-x-1 hover:translate-y-1 active:translate-x-2 active:translate-y-2;
   }
 
   .brutal-input {
-    @apply brutal-border px-4 py-3 font-bold bg-white;
-    @apply focus:outline-none focus:ring-4 focus:ring-black focus:ring-offset-2;
+    @apply brutal-border px-3 py-2 font-bold bg-white focus:outline-none focus:ring-4 focus:ring-black;
   }
 
-  .brutal-card {
-    @apply brutal-border bg-white shadow-brutal-lg;
+  .brutal-panel {
+    @apply brutal-border bg-white shadow-brutal;
   }
 }
