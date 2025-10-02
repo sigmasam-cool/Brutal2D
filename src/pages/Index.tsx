@@ -47,23 +47,23 @@ const Index = () => {
         </div>
 
         <div className="brutal-card bg-white p-12 text-center">
-          <h2 className="text-4xl font-black mb-6">FEATURES THAT ARE COOL</h2>
+          <h2 className="text-4xl font-black mb-6">v1.0: THE OVERHAUL UPDATE</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
             <div className="brutal-border bg-brutal-green p-6">
-              <h3 className="text-xl font-black mb-2">✓ VISUAL EDITOR</h3>
-              <p className="font-bold">Click, drag, done. No code required for basics.</p>
+              <h3 className="text-xl font-black mb-2">NEW EDITOR</h3>
+              <p className="font-bold">vscode-like editor.</p>
             </div>
             <div className="brutal-border bg-brutal-blue p-6">
-              <h3 className="text-xl font-black mb-2">✓ SPRITE SYSTEM</h3>
-              <p className="font-bold">Upload PNGs, organize, reuse everywhere.</p>
+              <h3 className="text-xl font-black mb-2">NEW SPRITE SYSTEM</h3>
+              <p className="font-bold">the images revolving</p>
             </div>
             <div className="brutal-border bg-brutal-purple p-6">
-              <h3 className="text-xl font-black mb-2">✓ ANIMATION TOOLS</h3>
-              <p className="font-bold">Frame-by-frame animations made simple.</p>
+              <h3 className="text-xl font-black mb-2">ANIMATIONS</h3>
+              <p className="font-bold">Finally!</p>
             </div>
             <div className="brutal-border bg-brutal-orange p-6">
-              <h3 className="text-xl font-black mb-2">✓ JAVASCRIPT API</h3>
-              <p className="font-bold">Full scripting power when you need it.</p>
+              <h3 className="text-xl font-black mb-2">AND MORE</h3>
+              <p className="font-bold">Start making your game!</p>
             </div>
           </div>
         </div>
