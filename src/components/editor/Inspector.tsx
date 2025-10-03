@@ -175,6 +175,26 @@ const Inspector: React.FC = () => {
           </div>
         )}
 
+        <div className="brutal-border border-t-4 pt-4 mt-4">
+          <h3 className="font-bold uppercase text-sm mb-2 text-brutal-purple">INTERACTIVITY</h3>
+          
+          <div>
+            <label className="block font-bold uppercase text-sm mb-2">
+              onClick FUNCTION
+            </label>
+            <input
+              type="text"
+              value={selectedObject.onClick || ''}
+              onChange={(e) => updateObject(selectedObject.id, { onClick: e.target.value })}
+              placeholder="functionName"
+              className="brutal-input w-full"
+            />
+            <p className="text-xs font-bold text-gray-500 mt-1">
+              ENTER FUNCTION NAME (WITHOUT PARENTHESES)
+            </p>
+          </div>
+        </div>
+
         <div>
           <label className="block font-bold uppercase text-sm mb-2">SCRIPT</label>
           <select

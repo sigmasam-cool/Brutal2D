@@ -20,6 +20,7 @@ export interface GameObject {
   color?: string;
   backgroundColor?: string;
   children?: string[];
+  onClick?: string; // Function name to call on click
 }
 
 export interface Scene {
@@ -239,7 +240,7 @@ export const EngineProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   <title>BrutalEngine Game</title>
   <style>
     body { margin: 0; padding: 0; overflow: hidden; }
-    canvas { display: block; background: #fff; }
+    canvas { display: block; background: #fff; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -271,24 +272,72 @@ export const EngineProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     });
 
     // Tweening utility
-    function tween(obj, property, target, duration, callback) {
+    const activeTweens = [];
+    function tween(objId, property, target, duration, callback) {
+      const obj = gameObjects[objId];
+      if (!obj) return;
+
       const start = obj[property];
       const change = target - start;
       const startTime = Date.now();
       
-      function update() {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        obj[property] = start + change * progress;
-        
-        if (progress < 1) {
-          requestAnimationFrame(update);
-        } else if (callback) {
-          callback();
+      activeTweens.push({
+        objId,
+        property,
+        start,
+        change,
+        duration,
+        startTime,
+        callback
+      });
+    }
+
+    // Update label text
+    function updateLabel(objId, newText) {
+      const obj = gameObjects[objId];
+      if (obj && (obj.type === 'label' || obj.type === 'button')) {
+        obj.text = newText;
+      }
+    }
+
+    // Get object by name
+    function getObjectByName(name) {
+      return Object.values(gameObjects).find(obj => obj.name === name);
+    }
+
+    // Click detection
+    function isPointInObject(x, y, obj) {
+      const dx = x - obj.x;
+      const dy = y - obj.y;
+      const angle = -obj.rotation * Math.PI / 180;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const localX = dx * cos - dy * sin;
+      const localY = dx * sin + dy * cos;
+      
+      return Math.abs(localX) <= obj.width / 2 && Math.abs(localY) <= obj.height / 2;
+    }
+
+    // Handle canvas clicks
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // Check objects in reverse order (top to bottom)
+      const objectsArray = Object.values(gameObjects).reverse();
+      for (const obj of objectsArray) {
+        if (!obj.visible) continue;
+        if (isPointInObject(x, y, obj) && obj.onClick) {
+          try {
+            eval(obj.onClick + '()');
+          } catch (error) {
+            console.error('onClick error:', error);
+          }
+          break;
         }
       }
-      update();
-    }
+    });
 
     // Execute scripts
     ${scripts.map(script => script.content).join('\\n')}
@@ -296,42 +345,61 @@ export const EngineProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
+      // Update tweens
+      const now = Date.now();
+      for (let i = activeTweens.length - 1; i >= 0; i--) {
+        const tween = activeTweens[i];
+        const elapsed = now - tween.startTime;
+        const progress = Math.min(elapsed / tween.duration, 1);
+        
+        const obj = gameObjects[tween.objId];
+        if (obj) {
+          obj[tween.property] = tween.start + tween.change * progress;
+        }
+        
+        if (progress >= 1) {
+          if (tween.callback) tween.callback();
+          activeTweens.splice(i, 1);
+        }
+      }
+      
       currentScene.objects.forEach(obj => {
-        if (!obj.visible) return;
+        const gameObj = gameObjects[obj.id];
+        if (!gameObj || !gameObj.visible) return;
         
         ctx.save();
-        ctx.translate(obj.x, obj.y);
-        ctx.rotate(obj.rotation * Math.PI / 180);
-        ctx.scale(obj.scaleX, obj.scaleY);
+        ctx.translate(gameObj.x, gameObj.y);
+        ctx.rotate(gameObj.rotation * Math.PI / 180);
+        ctx.scale(gameObj.scaleX, gameObj.scaleY);
         
-        if (obj.type === 'sprite' && obj.sprite) {
-          const img = loadedImages[obj.sprite];
+        if (gameObj.type === 'sprite' && gameObj.sprite) {
+          const img = loadedImages[gameObj.sprite];
           if (img && img.complete) {
-            ctx.drawImage(img, -obj.width/2, -obj.height/2, obj.width, obj.height);
+            ctx.drawImage(img, -gameObj.width/2, -gameObj.height/2, gameObj.width, gameObj.height);
           }
-        } else if (obj.type === 'panel') {
-          ctx.fillStyle = obj.backgroundColor || '#ffffff';
-          ctx.fillRect(-obj.width/2, -obj.height/2, obj.width, obj.height);
+        } else if (gameObj.type === 'panel') {
+          ctx.fillStyle = gameObj.backgroundColor || '#ffffff';
+          ctx.fillRect(-gameObj.width/2, -gameObj.height/2, gameObj.width, gameObj.height);
           ctx.strokeStyle = '#000000';
           ctx.lineWidth = 4;
-          ctx.strokeRect(-obj.width/2, -obj.height/2, obj.width, obj.height);
-        } else if (obj.type === 'button') {
-          ctx.fillStyle = obj.backgroundColor || '#FFE600';
-          ctx.fillRect(-obj.width/2, -obj.height/2, obj.width, obj.height);
+          ctx.strokeRect(-gameObj.width/2, -gameObj.height/2, gameObj.width, gameObj.height);
+        } else if (gameObj.type === 'button') {
+          ctx.fillStyle = gameObj.backgroundColor || '#FFE600';
+          ctx.fillRect(-gameObj.width/2, -gameObj.height/2, gameObj.width, gameObj.height);
           ctx.strokeStyle = '#000000';
           ctx.lineWidth = 4;
-          ctx.strokeRect(-obj.width/2, -obj.height/2, obj.width, obj.height);
+          ctx.strokeRect(-gameObj.width/2, -gameObj.height/2, gameObj.width, gameObj.height);
           ctx.fillStyle = '#000000';
           ctx.font = 'bold 16px Arial';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(obj.text || 'Button', 0, 0);
-        } else if (obj.type === 'label') {
-          ctx.fillStyle = obj.color || '#000000';
-          ctx.font = \`bold \${obj.fontSize || 16}px Arial\`;
+          ctx.fillText(gameObj.text || 'Button', 0, 0);
+        } else if (gameObj.type === 'label') {
+          ctx.fillStyle = gameObj.color || '#000000';
+          ctx.font = \`bold \${gameObj.fontSize || 16}px Arial\`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(obj.text || 'Label', 0, 0);
+          ctx.fillText(gameObj.text || 'Label', 0, 0);
         }
         
         ctx.restore();

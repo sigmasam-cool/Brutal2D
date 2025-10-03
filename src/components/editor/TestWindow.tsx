@@ -59,11 +59,75 @@ const TestWindow: React.FC<TestWindowProps> = ({ onClose }) => {
       });
     };
 
+    // Update label text utility
+    (window as any).updateLabel = function(objId: string, newText: string) {
+      const obj = gameObjectsRef.current[objId];
+      if (obj && (obj.type === 'label' || obj.type === 'button')) {
+        obj.text = newText;
+      }
+    };
+
+    // Get object by name utility
+    (window as any).getObjectByName = function(name: string) {
+      return Object.values(gameObjectsRef.current).find((obj: any) => obj.name === name);
+    };
+
+    // Click detection helper
+    const isPointInObject = (x: number, y: number, obj: any) => {
+      const dx = x - obj.x;
+      const dy = y - obj.y;
+      const angle = -obj.rotation * Math.PI / 180;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const localX = dx * cos - dy * sin;
+      const localY = dx * sin + dy * cos;
+      
+      return Math.abs(localX) <= obj.width / 2 && Math.abs(localY) <= obj.height / 2;
+    };
+
+    // Handle canvas clicks
+    const handleCanvasClick = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      // Check objects in reverse order (top to bottom)
+      const objectsArray = Object.values(gameObjectsRef.current).reverse();
+      for (const obj of objectsArray as any[]) {
+        if (!obj.visible) continue;
+        if (isPointInObject(x, y, obj) && obj.onClick) {
+          try {
+            eval(obj.onClick + '()');
+          } catch (error) {
+            console.error('onClick error:', error);
+          }
+          break;
+        }
+      }
+    };
+
+    canvas.addEventListener('click', handleCanvasClick);
+
     // Execute scripts
     try {
       scripts.forEach(script => {
-        const scriptFunc = new Function('gameObjects', 'ctx', 'currentScene', 'tween', script.content);
-        scriptFunc(gameObjectsRef.current, ctx, currentScene, (window as any).tween);
+        const scriptFunc = new Function(
+          'gameObjects', 
+          'ctx', 
+          'currentScene', 
+          'tween', 
+          'updateLabel',
+          'getObjectByName',
+          script.content
+        );
+        scriptFunc(
+          gameObjectsRef.current, 
+          ctx, 
+          currentScene, 
+          (window as any).tween,
+          (window as any).updateLabel,
+          (window as any).getObjectByName
+        );
       });
     } catch (error) {
       console.error('Script execution error:', error);
@@ -147,6 +211,7 @@ const TestWindow: React.FC<TestWindowProps> = ({ onClose }) => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
+      canvas.removeEventListener('click', handleCanvasClick);
     };
   }, [currentScene, sprites, scripts]);
 
@@ -180,13 +245,13 @@ const TestWindow: React.FC<TestWindowProps> = ({ onClose }) => {
             ref={canvasRef}
             width={800}
             height={600}
-            className="brutal-border bg-white shadow-brutal"
+            className="brutal-border bg-white shadow-brutal cursor-pointer"
           />
         </div>
 
         <div className="brutal-border border-t-4 p-3 bg-brutal-yellow">
           <p className="font-bold text-sm uppercase">
-            🎮 GAME RUNNING • PRESS ESC OR CLICK X TO CLOSE
+            GAME RUNNING • CLICK OBJECTS WITH onClick HANDLERS • PRESS ESC OR CLICK X TO CLOSE
           </p>
         </div>
       </div>

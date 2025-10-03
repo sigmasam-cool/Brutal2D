@@ -39,16 +39,23 @@ const ScriptEditor: React.FC = () => {
       const template = `// ${newScriptName}
 // Available functions:
 // - tween(objectId, property, target, duration, callback)
-// - gameObjects[id] - access game objects
-// - ctx - canvas context
+// - updateLabel(objectId, newText) - Update label/button text
+// - getObjectByName(name) - Get object by name
+// - gameObjects[id] - Access game objects
+// - ctx - Canvas context
 
-function start() {
-  // Initialization code here
-  console.log("Script started!");
+let clickCount = 0;
+
+function onButtonClick() {
+  clickCount++;
+  const label = getObjectByName("scoreLabel");
+  if (label) {
+    updateLabel(label.id, "Score: " + clickCount);
+  }
 }
 
-function update() {
-  // Your update logic here
+function start() {
+  console.log("Script started!");
 }
 
 start();
@@ -101,6 +108,28 @@ start();
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           range: range,
           detail: 'tween(objectId, property, target, duration, callback)',
+        });
+
+        // Add updateLabel function
+        suggestions.push({
+          label: 'updateLabel',
+          kind: monaco.languages.CompletionItemKind.Function,
+          documentation: 'Update the text of a label or button',
+          insertText: 'updateLabel("${1:objectId}", "${2:newText}")',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          range: range,
+          detail: 'updateLabel(objectId, newText)',
+        });
+
+        // Add getObjectByName function
+        suggestions.push({
+          label: 'getObjectByName',
+          kind: monaco.languages.CompletionItemKind.Function,
+          documentation: 'Get an object by its name',
+          insertText: 'getObjectByName("${1:objectName}")',
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          range: range,
+          detail: 'getObjectByName(name) => GameObject',
         });
 
         // Add gameObjects suggestion
@@ -171,6 +200,7 @@ start();
           { name: 'color', type: 'string', desc: 'Text color' },
           { name: 'backgroundColor', type: 'string', desc: 'Background color' },
           { name: 'fontSize', type: 'number', desc: 'Font size' },
+          { name: 'onClick', type: 'string', desc: 'Click handler function name' },
         ];
 
         properties.forEach(prop => {
@@ -225,12 +255,15 @@ start();
         fontSize?: number;
         color?: string;
         backgroundColor?: string;
+        onClick?: string;
       }
 
       declare const gameObjects: Record<string, GameObject>;
       declare const ctx: CanvasRenderingContext2D;
       declare const currentScene: any;
       declare function tween(objectId: string, property: string, target: number, duration: number, callback?: () => void): void;
+      declare function updateLabel(objectId: string, newText: string): void;
+      declare function getObjectByName(name: string): GameObject | undefined;
     `;
 
     monaco.languages.typescript.javascriptDefaults.addExtraLib(extraLibs, 'brutalengine.d.ts');
@@ -354,12 +387,12 @@ start();
             </div>
 
             <div className="brutal-border border-t-4 p-4 bg-brutal-yellow">
-              <p className="font-bold text-sm uppercase mb-2">💡 TIPS:</p>
+              <p className="font-bold text-sm uppercase mb-2">💡 NEW FEATURES:</p>
               <ul className="text-sm font-bold space-y-1">
-                <li>• TYPE TO SEE AUTOCOMPLETE SUGGESTIONS</li>
-                <li>• CTRL+SPACE FOR MANUAL SUGGESTIONS</li>
+                <li>• updateLabel(objectId, "text") - UPDATE LABELS</li>
+                <li>• getObjectByName("name") - FIND OBJECTS</li>
+                <li>• obj.onClick = "functionName" - ADD CLICK HANDLERS</li>
                 <li>• USE tween() TO ANIMATE PROPERTIES</li>
-                <li>• ACCESS OBJECTS VIA gameObjects["id"]</li>
               </ul>
             </div>
           </>
