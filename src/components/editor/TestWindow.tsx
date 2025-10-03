@@ -91,8 +91,8 @@ const TestWindow: React.FC<TestWindowProps> = ({ onClose }) => {
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       
-      // Check objects in reverse order (top to bottom)
-      const objectsArray = Object.values(gameObjectsRef.current).reverse();
+      // Sort by layer (highest first) and check clicks
+      const objectsArray = Object.values(gameObjectsRef.current).sort((a: any, b: any) => b.layer - a.layer);
       for (const obj of objectsArray as any[]) {
         if (!obj.visible) continue;
         if (isPointInObject(x, y, obj) && obj.onClick) {
@@ -157,8 +157,11 @@ const TestWindow: React.FC<TestWindowProps> = ({ onClose }) => {
         }
       }
 
+      // Sort objects by layer (lowest to highest)
+      const sortedObjects = Object.values(gameObjectsRef.current).sort((a: any, b: any) => a.layer - b.layer);
+
       // Render objects
-      Object.values(gameObjectsRef.current).forEach((obj: any) => {
+      sortedObjects.forEach((obj: any) => {
         if (!obj.visible) return;
         
         ctx.save();

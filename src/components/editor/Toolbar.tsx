@@ -11,7 +11,7 @@ interface ToolbarProps {
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({ activeTab, setActiveTab }) => {
-  const { exportToHTML, addObject } = useEngine();
+  const { exportToHTML, addObject, currentScene } = useEngine();
   const { toast } = useToast();
   const [showTestWindow, setShowTestWindow] = useState(false);
 
@@ -40,6 +40,11 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTab, setActiveTab }) => {
   };
 
   const handleAddObject = (type: 'sprite' | 'panel' | 'button' | 'label') => {
+    // Calculate next layer (highest + 1)
+    const maxLayer = currentScene?.objects.length 
+      ? Math.max(...currentScene.objects.map(o => o.layer || 0))
+      : 0;
+
     addObject({
       name: `New ${type}`,
       type,
@@ -51,6 +56,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ activeTab, setActiveTab }) => {
       scaleX: 1,
       scaleY: 1,
       visible: true,
+      layer: maxLayer + 1,
       text: type === 'label' ? 'LABEL TEXT' : type === 'button' ? 'BUTTON' : undefined,
       fontSize: 16,
       color: '#000000',

@@ -12,6 +12,7 @@ export interface GameObject {
   scaleX: number;
   scaleY: number;
   visible: boolean;
+  layer: number; // Layer for rendering order (higher = on top)
   sprite?: string;
   animation?: string;
   script?: string;
@@ -72,6 +73,7 @@ interface EngineContextType {
   addAnimation: (animation: Omit<Animation, 'id'>) => void;
   deleteAnimation: (id: string) => void;
   exportToHTML: () => string;
+  moveObjectLayer: (id: string, direction: 'up' | 'down' | 'top' | 'bottom') => void;
 }
 
 const EngineContext = createContext<EngineContextType | null>(null);
@@ -187,6 +189,34 @@ export const EngineProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const obj = currentScene?.objects.find(o => o.id === id);
     setSelectedObject(obj || null);
   }, [currentScene]);
+
+  const moveObjectLayer = useCallback((id: string, direction: 'up' | 'down' | 'top' | 'bottom') => {
+    if (!currentScene) return;
+
+    const obj = currentScene.objects.find(o => o.id === id);
+    if (!obj) return;
+
+    const sortedObjects = [...currentScene.objects].sort((a, b) => a.layer - b.layer);
+    const currentIndex = sortedObjects.findIndex(o => o.id === id);
+
+    let newLayer = obj.layer;
+
+    if (direction === 'up' && currentIndex < sortedObjects.length - 1) {
+      const nextObj = sortedObjects[currentIndex + 1];
+      newLayer = nextObj.layer + 1;
+    } else if (direction === 'down' && currentIndex > 0) {
+      const prevObj = sortedObjects[currentIndex - 1];
+      newLayer = prevObj.layer - 1;
+    } else if (direction === 'top') {
+      const maxLayer = Math.max(...sortedObjects.map(o => o.layer));
+      newLayer = maxLayer + 1;
+    } else if (direction === 'bottom') {
+      const minLayer = Math.min(...sortedObjects.map(o => o.layer));
+      newLayer = minLayer - 1;
+    }
+
+    updateObject(id, { layer: newLayer });
+  }, [currentScene, updateObject]);
 
   const addScript = useCallback((name: string, content: string) => {
     const newScript: Script = {
@@ -324,9 +354,9 @@ export const EngineProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       
-      // Check objects in reverse order (top to bottom)
-      const objectsArray = Object.values(gameObjects).reverse();
-      for (const obj of objectsArray) {
+      // Sort by layer (highest first) and check clicks
+      const sortedObjects = Object.values(gameObjects).sort((a, b) => b.layer - a.layer);
+      for (const obj of sortedObjects) {
         if (!obj.visible) continue;
         if (isPointInObject(x, y, obj) && obj.onClick) {
           try {
@@ -363,9 +393,14 @@ export const EngineProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
       
-      currentScene.objects.forEach(obj => {
-        const gameObj = gameObjects[obj.id];
-        if (!gameObj || !gameObj.visible) return;
+      // Sort objects by layer before rendering
+      const sortedObjects = currentScene.objects
+        .map(obj => gameObjects[obj.id])
+        .filter(obj => obj)
+        .sort((a, b) => a.layer - b.layer);
+      
+      sortedObjects.forEach(gameObj => {
+        if (!gameObj.visible) return;
         
         ctx.save();
         ctx.translate(gameObj.x, gameObj.y);
@@ -437,7 +472,8 @@ export const EngineProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       deleteSprite,
       addAnimation,
       deleteAnimation,
-      exportToHTML
+      exportToHTML,
+      moveObjectLayer
     }}>
       {children}
     </EngineContext.Provider>

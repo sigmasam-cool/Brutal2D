@@ -1,11 +1,15 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useEngine } from '@/contexts/EngineContext';
 
+type DragMode = 'move' | 'resize-tl' | 'resize-tr' | 'resize-bl' | 'resize-br' | 'rotate' | null;
+
 const SceneCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { currentScene, selectedObject, selectObject, updateObject, sprites } = useEngine();
-  const [isDragging, setIsDragging] = useState(false);
+  const [dragMode, setDragMode] = useState<DragMode>(null);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [initialState, setInitialState] = useState<any>(null);
   const [loadedImages, setLoadedImages] = useState<Record<string, HTMLImageElement>>({});
 
   useEffect(() => {
@@ -45,8 +49,11 @@ const SceneCanvas: React.FC = () => {
       ctx.stroke();
     }
 
+    // Sort objects by layer (lowest to highest)
+    const sortedObjects = [...currentScene.objects].sort((a, b) => a.layer - b.layer);
+
     // Draw objects
-    currentScene.objects.forEach(obj => {
+    sortedObjects.forEach(obj => {
       if (!obj.visible) return;
 
       ctx.save();
@@ -91,18 +98,101 @@ const SceneCanvas: React.FC = () => {
         ctx.fillText(obj.text || 'LABEL', 0, 0);
       }
 
-      // Draw selection outline
+      ctx.restore();
+
+      // Draw selection outline and handles
       if (selectedObject?.id === obj.id) {
+        ctx.save();
+        ctx.translate(obj.x, obj.y);
+        ctx.rotate(obj.rotation * Math.PI / 180);
+
+        // Selection outline
         ctx.strokeStyle = '#FF006E';
         ctx.lineWidth = 3;
         ctx.setLineDash([5, 5]);
         ctx.strokeRect(-obj.width / 2 - 5, -obj.height / 2 - 5, obj.width + 10, obj.height + 10);
         ctx.setLineDash([]);
-      }
 
-      ctx.restore();
+        // Corner resize handles
+        const handleSize = 12;
+        const corners = [
+          { x: -obj.width / 2, y: -obj.height / 2, color: '#00F5FF' }, // top-left
+          { x: obj.width / 2, y: -obj.height / 2, color: '#00FF85' },  // top-right
+          { x: -obj.width / 2, y: obj.height / 2, color: '#B537F2' },  // bottom-left
+          { x: obj.width / 2, y: obj.height / 2, color: '#FF6B00' },   // bottom-right
+        ];
+
+        corners.forEach(corner => {
+          ctx.fillStyle = corner.color;
+          ctx.fillRect(corner.x - handleSize / 2, corner.y - handleSize / 2, handleSize, handleSize);
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(corner.x - handleSize / 2, corner.y - handleSize / 2, handleSize, handleSize);
+        });
+
+        // Rotation handle
+        const rotateHandleDistance = obj.height / 2 + 30;
+        ctx.beginPath();
+        ctx.moveTo(0, -obj.height / 2);
+        ctx.lineTo(0, -rotateHandleDistance);
+        ctx.strokeStyle = '#FFE600';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, -rotateHandleDistance, 8, 0, Math.PI * 2);
+        ctx.fillStyle = '#FFE600';
+        ctx.fill();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.restore();
+      }
     });
   }, [currentScene, selectedObject, loadedImages]);
+
+  const getHandleAtPosition = (x: number, y: number, obj: any): DragMode => {
+    const handleSize = 12;
+    const rotateHandleDistance = obj.height / 2 + 30;
+
+    // Transform mouse position to object space
+    const dx = x - obj.x;
+    const dy = y - obj.y;
+    const angle = -obj.rotation * Math.PI / 180;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const localX = dx * cos - dy * sin;
+    const localY = dx * sin + dy * cos;
+
+    // Check rotation handle
+    const rotateHandleX = 0;
+    const rotateHandleY = -rotateHandleDistance;
+    if (Math.abs(localX - rotateHandleX) < 10 && Math.abs(localY - rotateHandleY) < 10) {
+      return 'rotate';
+    }
+
+    // Check corner handles
+    const corners = [
+      { x: -obj.width / 2, y: -obj.height / 2, mode: 'resize-tl' as DragMode },
+      { x: obj.width / 2, y: -obj.height / 2, mode: 'resize-tr' as DragMode },
+      { x: -obj.width / 2, y: obj.height / 2, mode: 'resize-bl' as DragMode },
+      { x: obj.width / 2, y: obj.height / 2, mode: 'resize-br' as DragMode },
+    ];
+
+    for (const corner of corners) {
+      if (Math.abs(localX - corner.x) < handleSize && Math.abs(localY - corner.y) < handleSize) {
+        return corner.mode;
+      }
+    }
+
+    // Check if inside object bounds
+    if (Math.abs(localX) <= obj.width / 2 && Math.abs(localY) <= obj.height / 2) {
+      return 'move';
+    }
+
+    return null;
+  };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -112,18 +202,41 @@ const SceneCanvas: React.FC = () => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Check if clicking on an object (reverse order for top-to-bottom)
-    for (let i = currentScene.objects.length - 1; i >= 0; i--) {
-      const obj = currentScene.objects[i];
+    // Check if clicking on selected object's handles
+    if (selectedObject) {
+      const mode = getHandleAtPosition(x, y, selectedObject);
+      if (mode) {
+        setDragMode(mode);
+        setDragStart({ x, y });
+        setInitialState({
+          x: selectedObject.x,
+          y: selectedObject.y,
+          width: selectedObject.width,
+          height: selectedObject.height,
+          rotation: selectedObject.rotation,
+        });
+        return;
+      }
+    }
+
+    // Check if clicking on an object (reverse order for top-to-bottom, by layer)
+    const sortedObjects = [...currentScene.objects].sort((a, b) => b.layer - a.layer);
+    for (let i = 0; i < sortedObjects.length; i++) {
+      const obj = sortedObjects[i];
       if (!obj.visible) continue;
 
-      const dx = x - obj.x;
-      const dy = y - obj.y;
-
-      if (Math.abs(dx) <= obj.width / 2 && Math.abs(dy) <= obj.height / 2) {
+      const mode = getHandleAtPosition(x, y, obj);
+      if (mode) {
         selectObject(obj.id);
-        setIsDragging(true);
-        setDragOffset({ x: dx, y: dy });
+        setDragMode(mode);
+        setDragStart({ x, y });
+        setInitialState({
+          x: obj.x,
+          y: obj.y,
+          width: obj.width,
+          height: obj.height,
+          rotation: obj.rotation,
+        });
         return;
       }
     }
@@ -132,23 +245,89 @@ const SceneCanvas: React.FC = () => {
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !selectedObject) return;
-
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !selectedObject || !dragMode || !initialState) return;
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    updateObject(selectedObject.id, {
-      x: x - dragOffset.x,
-      y: y - dragOffset.y
-    });
+    const dx = x - dragStart.x;
+    const dy = y - dragStart.y;
+
+    if (dragMode === 'move') {
+      updateObject(selectedObject.id, {
+        x: initialState.x + dx,
+        y: initialState.y + dy,
+      });
+    } else if (dragMode === 'rotate') {
+      const centerX = selectedObject.x;
+      const centerY = selectedObject.y;
+      const angle = Math.atan2(y - centerY, x - centerX) * 180 / Math.PI + 90;
+      updateObject(selectedObject.id, {
+        rotation: Math.round(angle),
+      });
+    } else if (dragMode.startsWith('resize-')) {
+      // Calculate resize based on corner
+      const angle = selectedObject.rotation * Math.PI / 180;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const localDx = dx * cos + dy * sin;
+      const localDy = -dx * sin + dy * cos;
+
+      let newWidth = initialState.width;
+      let newHeight = initialState.height;
+      let newX = initialState.x;
+      let newY = initialState.y;
+
+      if (dragMode === 'resize-br') {
+        newWidth = Math.max(20, initialState.width + localDx * 2);
+        newHeight = Math.max(20, initialState.height + localDy * 2);
+      } else if (dragMode === 'resize-bl') {
+        newWidth = Math.max(20, initialState.width - localDx * 2);
+        newHeight = Math.max(20, initialState.height + localDy * 2);
+      } else if (dragMode === 'resize-tr') {
+        newWidth = Math.max(20, initialState.width + localDx * 2);
+        newHeight = Math.max(20, initialState.height - localDy * 2);
+      } else if (dragMode === 'resize-tl') {
+        newWidth = Math.max(20, initialState.width - localDx * 2);
+        newHeight = Math.max(20, initialState.height - localDy * 2);
+      }
+
+      updateObject(selectedObject.id, {
+        width: Math.round(newWidth),
+        height: Math.round(newHeight),
+        x: Math.round(newX),
+        y: Math.round(newY),
+      });
+    }
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
+    setDragMode(null);
+    setInitialState(null);
+  };
+
+  const getCursor = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (dragMode) {
+      if (dragMode === 'move') return 'move';
+      if (dragMode === 'rotate') return 'grab';
+      return 'nwse-resize';
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas || !selectedObject) return 'crosshair';
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const mode = getHandleAtPosition(x, y, selectedObject);
+    if (mode === 'move') return 'move';
+    if (mode === 'rotate') return 'grab';
+    if (mode?.startsWith('resize-')) return 'nwse-resize';
+
+    return 'crosshair';
   };
 
   return (
@@ -158,7 +337,7 @@ const SceneCanvas: React.FC = () => {
           ref={canvasRef}
           width={800}
           height={600}
-          className="cursor-crosshair"
+          style={{ cursor: dragMode ? (dragMode === 'move' ? 'move' : dragMode === 'rotate' ? 'grabbing' : 'nwse-resize') : 'crosshair' }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}

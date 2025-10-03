@@ -36,6 +36,19 @@ const Inspector: React.FC = () => {
           />
         </div>
 
+        <div>
+          <label className="block font-bold uppercase text-sm mb-2">LAYER</label>
+          <input
+            type="number"
+            value={selectedObject.layer}
+            onChange={(e) => updateObject(selectedObject.id, { layer: parseInt(e.target.value) })}
+            className="brutal-input w-full"
+          />
+          <p className="text-xs font-bold text-gray-500 mt-1">
+            HIGHER = RENDERED ON TOP
+          </p>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block font-bold uppercase text-sm mb-2">X</label>
